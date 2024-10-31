@@ -1,0 +1,63 @@
+name: Frontend CI
+
+on:
+  push:
+    paths:
+      - 'src/ChatAzure.Web/**'
+    branches: [ develop, feature/*, release/* ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'src/ChatAzure.Web/package-lock.json'
+          
+      - name: Install dependencies
+        working-directory: src/ChatAzure.Web
+        run: npm ci
+        
+      - name: Lint
+        working-directory: src/ChatAzure.Web
+        run: npm run lint
+        
+      - name: Type Check
+        working-directory: src/ChatAzure.Web
+        run: npm run type-check
+        
+      - name: Test
+        working-directory: src/ChatAzure.Web
+        run: npm run test:unit -- --coverage
+        
+      - name: Build
+        working-directory: src/ChatAzure.Web
+        run: npm run build
+        
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        
+      - name: Run Security Scan
+        uses: github/codeql-action/analyze@v2
+        with:
+          languages: javascript
+          
+  analyze:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

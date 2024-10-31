@@ -1,0 +1,1640 @@
+<template>
+
+
+
+
+
+
+
+  <div class="flex flex-col h-screen bg-gray-100">
+
+
+
+
+
+
+
+    <ErrorBoundary ref="errorBoundary">
+
+
+
+
+
+
+
+      <div class="flex-1 overflow-y-auto p-4 space-y-4">
+
+
+
+
+
+
+
+        <div v-for="message in messages" 
+
+
+
+
+
+
+
+             :key="message.messageId" 
+
+
+
+
+
+
+
+             :class="{'flex justify-end': message.sender.type === 'User'}">
+
+
+
+
+
+
+
+          <div :class="[
+
+
+
+
+
+
+
+            'max-w-xs lg:max-w-md p-4 rounded-lg shadow',
+
+
+
+
+
+
+
+            message.sender.type === 'User' 
+
+
+
+
+
+
+
+              ? 'bg-blue-500 text-white ml-auto' 
+
+
+
+
+
+
+
+              : 'bg-white text-gray-800'
+
+
+
+
+
+
+
+          ]">
+
+
+
+
+
+
+
+            {{ message.content }}
+
+
+
+
+
+
+
+            <div class="text-xs mt-1 opacity-70">
+
+
+
+
+
+
+
+              {{ formatTime(message.timestamp) }}
+
+
+
+
+
+
+
+            </div>
+
+
+
+
+
+
+
+          </div>
+
+
+
+
+
+
+
+        </div>
+
+
+
+
+
+
+
+        <div v-if="isTyping" class="flex items-center space-x-2">
+
+
+
+
+
+
+
+          <div class="typing-indicator">
+
+
+
+
+
+
+
+            <span></span>
+
+
+
+
+
+
+
+            <span></span>
+
+
+
+
+
+
+
+            <span></span>
+
+
+
+
+
+
+
+          </div>
+
+
+
+
+
+
+
+        </div>
+
+
+
+
+
+
+
+      </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      <div class="border-t bg-white p-4">
+
+
+
+
+
+
+
+        <div class="flex items-end space-x-4">
+
+
+
+
+
+
+
+          <FileUpload
+
+
+
+
+
+
+
+            v-if="allowFileUpload"
+
+
+
+
+
+
+
+            @filesSelected="handleFileUpload"
+
+
+
+
+
+
+
+            @error="handleError"
+
+
+
+
+
+
+
+            class="flex-shrink-0"
+
+
+
+
+
+
+
+          />
+
+
+
+
+
+
+
+          <div class="flex-1 relative">
+
+
+
+
+
+
+
+            <textarea
+
+
+
+
+
+
+
+              v-model="newMessage"
+
+
+
+
+
+
+
+              @keydown.enter.prevent="sendMessage"
+
+
+
+
+
+
+
+              @input="handleTyping"
+
+
+
+
+
+
+
+              placeholder="Type a message..."
+
+
+
+
+
+
+
+              class="w-full rounded-lg border border-gray-300 px-4 py-2 pr-12 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+
+
+
+
+
+
+
+              rows="1"
+
+
+
+
+
+
+
+              ref="messageInput"
+
+
+
+
+
+
+
+            ></textarea>
+
+
+
+
+
+
+
+            <button
+
+
+
+
+
+
+
+              @click="sendMessage"
+
+
+
+
+
+
+
+              class="absolute right-2 bottom-2 text-blue-500 hover:text-blue-600"
+
+
+
+
+
+
+
+              :disabled="!newMessage.trim()"
+
+
+
+
+
+
+
+            >
+
+
+
+
+
+
+
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+
+
+
+
+
+
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+
+
+
+
+
+
+
+              </svg>
+
+
+
+
+
+
+
+            </button>
+
+
+
+
+
+
+
+          </div>
+
+
+
+
+
+
+
+        </div>
+
+
+
+
+
+
+
+      </div>
+
+
+
+
+
+
+
+    </ErrorBoundary>
+
+
+
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+</template>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script setup lang="ts">
+
+
+
+
+
+
+
+import { ref, onMounted, onUnmounted } from 'vue'
+
+
+
+
+
+
+
+import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr'
+
+
+
+
+
+
+
+import ErrorBoundary from './ErrorBoundary.vue'
+
+
+
+
+
+
+
+import FileUpload from './FileUpload.vue'
+
+
+
+
+
+
+
+import { formatTime } from '../utils/dateFormat'
+
+
+
+
+
+
+
+import type { ChatMessage } from '@/types/chat'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const props = defineProps({
+
+
+
+
+
+
+
+  sessionId: {
+
+
+
+
+
+
+
+    type: String,
+
+
+
+
+
+
+
+    required: true
+
+
+
+
+
+
+
+  },
+
+
+
+
+
+
+
+  allowFileUpload: {
+
+
+
+
+
+
+
+    type: Boolean,
+
+
+
+
+
+
+
+    default: true
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const messages = ref<ChatMessage[]>([])
+
+
+
+
+
+
+
+const newMessage = ref('')
+
+
+
+
+
+
+
+const isTyping = ref(false)
+
+
+
+
+
+
+
+const connection = ref<HubConnection | null>(null)
+
+
+
+
+
+
+
+const typingTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
+
+
+
+
+
+
+
+const errorBoundary = ref<InstanceType<typeof ErrorBoundary> | null>(null)
+
+
+
+
+
+
+
+const messageInput = ref<HTMLTextAreaElement | null>(null)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+onMounted(async () => {
+
+
+
+
+
+
+
+  await setupSignalRConnection()
+
+
+
+
+
+
+
+  adjustTextareaHeight()
+
+
+
+
+
+
+
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+onUnmounted(() => {
+
+
+
+
+
+
+
+  if (connection.value) {
+
+
+
+
+
+
+
+    connection.value.stop()
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function setupSignalRConnection() {
+
+
+
+
+
+
+
+  try {
+
+
+
+
+
+
+
+    connection.value = new HubConnectionBuilder()
+
+
+
+
+
+
+
+      .withUrl(`/chatHub?sessionId=${props.sessionId}`)
+
+
+
+
+
+
+
+      .withAutomaticReconnect()
+
+
+
+
+
+
+
+      .build()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    connection.value.on('ReceiveMessage', (message: ChatMessage) => {
+
+
+
+
+
+
+
+      messages.value.push(message)
+
+
+
+
+
+
+
+      isTyping.value = false
+
+
+
+
+
+
+
+    })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    connection.value.on('UserTyping', () => {
+
+
+
+
+
+
+
+      isTyping.value = true
+
+
+
+
+
+
+
+    })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    connection.value.on('UserStoppedTyping', () => {
+
+
+
+
+
+
+
+      isTyping.value = false
+
+
+
+
+
+
+
+    })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    await connection.value.start()
+
+
+
+
+
+
+
+  } catch (err) {
+
+
+
+
+
+
+
+    errorBoundary.value?.handleError(err as Error, setupSignalRConnection)
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function sendMessage() {
+
+
+
+
+
+
+
+  if (!newMessage.value.trim()) return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  try {
+
+
+
+
+
+
+
+    await connection.value?.invoke('SendMessage', props.sessionId, {
+
+
+
+
+
+
+
+      content: newMessage.value,
+
+
+
+
+
+
+
+      timestamp: new Date().toISOString(),
+
+
+
+
+
+
+
+      metadata: {
+
+
+
+
+
+
+
+        clientInfo: {
+
+
+
+
+
+
+
+          platform: navigator.platform,
+
+
+
+
+
+
+
+          version: '1.0.0'
+
+
+
+
+
+
+
+        }
+
+
+
+
+
+
+
+      }
+
+
+
+
+
+
+
+    })
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+    newMessage.value = ''
+
+
+
+
+
+
+
+    adjustTextareaHeight()
+
+
+
+
+
+
+
+  } catch (err) {
+
+
+
+
+
+
+
+    errorBoundary.value?.handleError(err as Error)
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function handleTyping() {
+
+
+
+
+
+
+
+  adjustTextareaHeight()
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+  if (typingTimeout.value) {
+
+
+
+
+
+
+
+    clearTimeout(typingTimeout.value)
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  connection.value?.invoke('StartTyping', props.sessionId)
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+  typingTimeout.value = setTimeout(() => {
+
+
+
+
+
+
+
+    connection.value?.invoke('StopTyping', props.sessionId)
+
+
+
+
+
+
+
+  }, 1000)
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function handleFileUpload(files: File[]) {
+
+
+
+
+
+
+
+  try {
+
+
+
+
+
+
+
+    // Handle file upload logic
+
+
+
+
+
+
+
+  } catch (err) {
+
+
+
+
+
+
+
+    errorBoundary.value?.handleError(err as Error)
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function handleError(error: Error) {
+
+
+
+
+
+
+
+  errorBoundary.value?.handleError(error)
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function adjustTextareaHeight() {
+
+
+
+
+
+
+
+  if (messageInput.value) {
+
+
+
+
+
+
+
+    messageInput.value.style.height = 'auto'
+
+
+
+
+
+
+
+    messageInput.value.style.height = `${messageInput.value.scrollHeight}px`
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style scoped>
+
+
+
+
+
+
+
+.typing-indicator {
+
+
+
+
+
+
+
+  display: flex;
+
+
+
+
+
+
+
+  align-items: center;
+
+
+
+
+
+
+
+  gap: 2px;
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.typing-indicator span {
+
+
+
+
+
+
+
+  width: 8px;
+
+
+
+
+
+
+
+  height: 8px;
+
+
+
+
+
+
+
+  background-color: #90cdf4;
+
+
+
+
+
+
+
+  border-radius: 50%;
+
+
+
+
+
+
+
+  animation: bounce 1.4s infinite ease-in-out;
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+
+
+
+
+
+
+
+.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@keyframes bounce {
+
+
+
+
+
+
+
+  0%, 80%, 100% { transform: scale(0); }
+
+
+
+
+
+
+
+  40% { transform: scale(1); }
+
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+</style> 
+
+
+
+
+
+
+

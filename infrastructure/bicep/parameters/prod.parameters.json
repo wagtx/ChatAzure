@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "prod"
+    },
+    "location": {
+      "value": "eastus"
+    },
+    "appName": {
+      "value": "chatazure"
+    },
+    "appServicePlanSku": {
+      "value": {
+        "name": "P1v2",
+        "tier": "PremiumV2",
+        "capacity": 2
+      }
+    },
+    "aiServiceSku": {
+      "value": "S1"
+    },
+    "redisCacheSku": {
+      "value": {
+        "name": "Standard",
+        "family": "C",
+        "capacity": 2
+      }
+    },
+    "enablePrivateEndpoints": {
+      "value": true
+    },
+    "tags": {
+      "value": {
+        "Environment": "Production",
+        "CostCenter": "ChatAzure-Prod",
+        "Owner": "Operations Team"
+      }
+    }
+  }
+} 
+
+
+

@@ -1,0 +1,98 @@
+name: Release CD
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+          
+      - name: Run Tests
+        run: dotnet test --configuration Release
+        
+      - name: Run Security Scan
+        uses: github/codeql-action/analyze@v2
+        with:
+          languages: csharp, javascript
+          
+  deploy-infrastructure:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: Deploy Infrastructure
+        uses: azure/arm-deploy@v1
+        with:
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION }}
+          resourceGroupName: ${{ secrets.RESOURCE_GROUP }}
+          template: ./infrastructure/bicep/main.bicep
+          parameters: ./infrastructure/bicep/parameters/prod.parameters.json
+          
+  deploy-backend:
+    needs: deploy-infrastructure
+    runs-on: windows-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+          
+      - name: Build Backend
+        run: |
+          dotnet restore
+          dotnet publish src/ChatAzure.API/ChatAzure.API.csproj -c Release -o ./publish
+          
+      - name: Deploy Backend
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.WEBAPP_NAME }}
+          package: ./publish
+          
+  deploy-frontend:
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Build Frontend
+        run: |
+          cd src/ChatAzure.Web
+          npm ci
+          npm run build
+          
+      - name: Deploy Frontend
+        uses: azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.STATIC_WEB_APP_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          app_location: "src/ChatAzure.Web/dist"
+          skip_app_build: true
+
+
+

@@ -1,0 +1,32 @@
+# Default owners for everything in the repo
+
+* @project-lead
+
+
+
+# Frontend code
+
+/src/ChatAzure.Web/ @frontend-team-lead
+
+
+
+# Backend code
+
+/src/ChatAzure.API/ @backend-team-lead
+
+/src/ChatAzure.Core/ @backend-team-lead
+
+/src/ChatAzure.Services/ @backend-team-lead
+
+
+
+# Infrastructure code
+
+/infrastructure/ @devops-team-lead
+
+
+
+# Documentation
+
+/docs/ @tech-writer @project-lead
+
