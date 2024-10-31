@@ -92,4 +92,30 @@ terraform.rc
 *.tmp
 *.temp
 Thumbs.db
-desktop.ini 
+desktop.ini
+
+# Ensure deep folder coverage for build artifacts
+**/[Bb]in/
+**/[Oo]bj/
+**/[Dd]ebug/
+**/[Rr]elease/
+**/build/
+**/dist/
+
+# Coverage reports in any directory
+**/coverage/
+**/TestResults/
+
+# Node modules in any directory
+**/node_modules/
+
+# Environment files in any directory
+**/.env
+**/.env.*
+!**/.env.example
+
+# VS Code settings in any directory
+**/.vscode/
+
+# Visual Studio files in any directory
+**/.vs/
