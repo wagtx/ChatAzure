@@ -1,0 +1,95 @@
+# .NET Core
+*.swp
+*.*~
+project.lock.json
+.DS_Store
+*.pyc
+nupkg/
+
+# Visual Studio Code
+.vscode/
+
+# Visual Studio
+.vs/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResults/
+coverage/
+coverage.json
+coverage.cobertura.xml
+
+# Node.js/Vue.js
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.idea/
+*.sln.iml
+*.sw?
+.ntvs*
+.njsproj
+.sln
+.sw?
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Azure Functions
+local.settings.json
+bin/
+obj/
+
+# Bicep
+*.bicepparam
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraformrc
+terraform.rc
+
+# Misc
+*.bak
+*.cache
+*.tmp
+*.temp
+Thumbs.db
+desktop.ini 
